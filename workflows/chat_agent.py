@@ -1,7 +1,8 @@
-from agent.agent import create_aws_agent
+"""from agent.agent import create_aws_agent
 from langchain_core.messages import HumanMessage
 from utils.logger import logger
-
+from langchain_core.messages import SystemMessage
+from llm.prompts import SYSTEM_PROMPT
 class ChatWorkflow:
     def __init__(self):
         self.agent_executor = create_aws_agent()
@@ -26,6 +27,44 @@ class ChatWorkflow:
             self.chat_history = final_messages
             
             return output
+        except Exception as e:
+            logger.error(f"Error executing agent: {str(e)}")
+            return f"An error occurred: {str(e)}" """
+from agent.agent import create_aws_agent
+from langchain_core.messages import HumanMessage, SystemMessage
+from utils.logger import logger
+from llm.prompts import SYSTEM_PROMPT
+
+
+class ChatWorkflow:
+    def __init__(self):
+        self.agent_executor = create_aws_agent()
+        
+        # Initialize chat history with system prompt
+        self.chat_history = [
+            SystemMessage(content=SYSTEM_PROMPT)
+        ]
+
+    def run(self, user_input: str) -> str:
+        logger.info(f"User Input: {user_input}")
+        
+        try:
+            self.chat_history.append(HumanMessage(content=user_input))
+            
+            # Invoke the LangGraph agent
+            response = self.agent_executor.invoke({
+                "messages": self.chat_history
+            })
+            
+            # Extract final response
+            final_messages = response.get("messages", [])
+            output = final_messages[-1].content if final_messages else "No response generated."
+            
+            # Sync history
+            self.chat_history = final_messages
+            
+            return output
+
         except Exception as e:
             logger.error(f"Error executing agent: {str(e)}")
             return f"An error occurred: {str(e)}"
