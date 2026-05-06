@@ -1,55 +1,111 @@
-# AWS DevOps Agent Configuration and IAM Setup
+# AWS DevOps Agent
 
-## Setting up your `.env`
+Natural-language AWS assistant built with LangChain, OpenAI, and boto3.
 
-Rename `.env.template` to `.env` and fill in the values:
+The agent can call AWS tools for services such as S3, EC2, IAM/STS, EKS, ECS, DynamoDB, CloudFormation, CloudWatch, Lambda, SNS, SQS, and Bedrock.
 
-```env
-OPENAI_API_KEY=your_openai_key
-AWS_ACCESS_KEY_ID=your_aws_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret
-AWS_DEFAULT_REGION=us-east-1
+## Setup
+
+Create and activate a virtual environment:
+
+```powershell
+python -m venv aws-agent-env
+.\aws-agent-env\Scripts\Activate.ps1
 ```
 
-## Running the Agent
+Install dependencies:
 
-1. Install dependencies: `pip install -r requirements.txt`
-2. Run the agent: `python scripts/run_agent.py`
-3. Try asking: *"Can you list all my S3 buckets?"*
+```powershell
+pip install -r requirements.txt
+```
 
-## AWS IAM Configuration (How to grant the Agent access)
+Create a `.env` file in the project root:
 
-To allow the AI Agent to execute actions on your behalf using natural language, it needs IAM permissions.
+```env
+OPENAI_API_KEY=your_openai_api_key
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_DEFAULT_REGION=us-east-1
+LLM_MODEL=gpt-4o-mini
+```
 
-### Option 1: Create an IAM User for the Agent (Recommended for Local Dev)
-1. Go to the AWS IAM Console.
-2. Click **Users** -> **Add users**.
-3. Name it `aws-devops-agent`.
-4. Choose **Attach policies directly**.
-5. *Which policies to attach?* It depends on what you want the agent to do.
-   - For full control: Attach `AdministratorAccess` (DANGEROUS: The LLM can do anything).
-   - For scoped control (Safer): Create a custom policy restricting actions. For example, if you only want it to manage S3 and EC2:
-     - Attach `AmazonS3FullAccess`
-     - Attach `AmazonEC2FullAccess`
-6. Finish creating the user.
-7. Go to the user's **Security credentials** tab.
-8. Click **Create access key**.
-9. Copy the `Access Key ID` and `Secret Access Key` into your `.env` file.
+Do not commit `.env` or paste API keys into chat, logs, GitHub, or screenshots.
 
-### Option 2: Assume Role (Advanced)
-If you are running this agent on an EC2 instance, you can attach an IAM Role to the instance instead of hardcoding credentials in `.env`. Boto3 will automatically use the instance's credentials.
+## Run The CLI Agent
 
-### Security Warning
-Do not run this agent with Administrator credentials in a production AWS account without strict review. The LLM could potentially delete critical infrastructure if instructed maliciously or accidentally. Always use least-privilege principles.
- 
-## Run the Agent 
-### Before running, create a virtual environment
-#### 1.)  python -m venv aws-agent-env
-#### 2.)  .\aws-agent-env\Scripts\Activate.ps1
-#### 3.)  pip install -r requirements.txt
-#### 4.)  python scripts/run_agent.py
+```powershell
+python scripts/run_agent.py
+```
 
+Example prompts:
 
+```text
+list my s3 buckets
+list iam users
+list my eks clusters
+show health of eks cluster my-cluster
+list ecs clusters
+show image names used by ecs service api-service in cluster my-cluster
+create dynamodb table named test-table with id as partition key
+```
 
+Type `exit` or `quit` to stop the CLI.
 
-#### python -c "import sys; print(sys.executable)"
+## Run The API
+
+Start the FastAPI server:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+Health check:
+
+```powershell
+curl http://127.0.0.1:8000/
+```
+
+Chat request:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/chat `
+  -H "Content-Type: application/json" `
+  -d "{\"message\":\"list my s3 buckets\"}"
+```
+
+## AWS Permissions
+
+The agent uses boto3, so it needs AWS credentials with permission for the actions you ask it to perform.
+
+For local development, create an IAM user or role for this agent and grant only the permissions you need. Avoid `AdministratorAccess` unless you are testing in a disposable AWS account.
+
+Common managed policies for testing:
+
+- `AmazonS3ReadOnlyAccess` for listing buckets and objects
+- `AmazonEC2ReadOnlyAccess` for describing EC2 resources
+- `IAMReadOnlyAccess` for listing IAM users and roles
+- `AmazonEKSClusterPolicy` or scoped EKS read permissions for EKS operations
+- `AmazonECS_FullAccess` includes broad ECS access; prefer a custom read-only ECS policy when possible
+- DynamoDB permissions such as `dynamodb:CreateTable`, `dynamodb:PutItem`, `dynamodb:GetItem`, `dynamodb:Query`, `dynamodb:Scan`, and `dynamodb:DeleteItem` only if you want DynamoDB write actions
+
+## Security Notes
+
+This project can perform real AWS actions. Some tools create, modify, or delete cloud resources.
+
+Use least-privilege IAM permissions, review commands before approving destructive actions, and test in a non-production AWS account first.
+
+If an OpenAI or AWS key is exposed, revoke it immediately and create a new one.
+
+## Useful Checks
+
+Verify the Python environment:
+
+```powershell
+python -c "import sys; print(sys.executable)"
+```
+
+Verify the agent imports:
+
+```powershell
+python -B -c "from agent.agent import create_aws_agent; print(type(create_aws_agent()).__name__)"
+```
