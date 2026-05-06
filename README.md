@@ -41,3 +41,15 @@ If you are running this agent on an EC2 instance, you can attach an IAM Role to 
 
 ### Security Warning
 Do not run this agent with Administrator credentials in a production AWS account without strict review. The LLM could potentially delete critical infrastructure if instructed maliciously or accidentally. Always use least-privilege principles.
+ 
+## Run the Agent 
+### Before running, create a virtual environment
+#### 1.)  python -m venv aws-agent-env
+#### 2.)  .\aws-agent-env\Scripts\Activate.ps1
+#### 3.)  pip install -r requirements.txt
+#### 4.)  python scripts/run_agent.py
+
+
+
+
+#### python -c "import sys; print(sys.executable)"

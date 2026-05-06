@@ -1,32 +1,21 @@
-"""from langgraph.prebuilt import create_react_agent
 from llm.client import get_llm
 from llm.prompts import SYSTEM_PROMPT
 from tools.custom_tools import all_aws_tools
-
-def create_aws_agent():
-    llm = get_llm()
-    
-    # We use LangGraph's prebuilt react agent which is the modern standard
-    agent_executor = create_react_agent(
-        llm, 
-        tools=all_aws_tools, 
-        messages_modifier=SYSTEM_PROMPT
-    )
-    
-    return agent_executor"""
-
-from langgraph.prebuilt import create_react_agent
-from llm.client import get_llm
-from tools.custom_tools import all_aws_tools
+from langchain.agents import initialize_agent, AgentType
+from langchain_core.messages import SystemMessage
 
 
 def create_aws_agent():
     llm = get_llm()
 
-    # Create the agent WITHOUT unsupported arguments
-    agent_executor = create_react_agent(
-        llm,
-        tools=all_aws_tools
+    agent = initialize_agent(
+        tools=all_aws_tools,
+        llm=llm,
+        agent=AgentType.OPENAI_FUNCTIONS,
+        verbose=False,
+        agent_kwargs={
+            "system_message": SystemMessage(content=SYSTEM_PROMPT)
+        }
     )
 
-    return agent_executor
+    return agent
